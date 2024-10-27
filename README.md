@@ -9,5 +9,5 @@ bash <(curl -Ls https://raw.githubusercontent.com/PeacedoseDev/vless-deploy/main
 # Удаление:
 
 ```shell
-bash <(curl -Ls https://raw.githubusercontent.com/PeacedoseDev/vless-deploy/main/test.sh --uninstall)
+bash <(curl -Ls https://raw.githubusercontent.com/PeacedoseDev/vless-deploy/main/test.sh) --uninstall
 ```
