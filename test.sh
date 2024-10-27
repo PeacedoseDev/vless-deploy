@@ -6,7 +6,7 @@ set -e
 # Функция установки
 install() {
   # Обновление пакетов
-  sudo apt update
+  # sudo apt update
   # sudo apt upgrade -y
 
   # Установка необходимых пакетов
@@ -32,7 +32,7 @@ install() {
   SING_BOX_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep 'tag_name' | cut -d\" -f4)
   SING_BOX_VERSION=${SING_BOX_VERSION#v} # Удаление ведущего 'v', если есть
   wget https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz -O sing-box.tar.gz
-  unzip sing-box.zip -d sing-box
+  unzip sing-box.tar.gz -d sing-box
   sudo mv sing-box/sing-box /usr/local/bin/
   sudo chmod +x /usr/local/bin/sing-box
   rm -rf sing-box sing-box.tar.gz
