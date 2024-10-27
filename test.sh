@@ -10,7 +10,7 @@ install() {
   # sudo apt upgrade -y
 
   # Установка необходимых пакетов
-  sudo apt install -y curl wget unzip uuid-runtime
+  sudo apt install -y curl wget uuid-runtime
 
   # Генерация UUID для пользователя Sing-box
   UUID=$(uuidgen)
@@ -32,10 +32,10 @@ install() {
   SING_BOX_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep 'tag_name' | cut -d\" -f4)
   SING_BOX_VERSION=${SING_BOX_VERSION#v} # Удаление ведущего 'v', если есть
   wget https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz -O sing-box.tar.gz
-  unzip sing-box.tar.gz -d sing-box
-  sudo mv sing-box/sing-box /usr/local/bin/
+  tar -xzf sing-box.tar.gz
+  sudo mv sing-box-${SING_BOX_VERSION}-linux-amd64/sing-box /usr/local/bin/
   sudo chmod +x /usr/local/bin/sing-box
-  rm -rf sing-box sing-box.tar.gz
+  rm -rf sing-box-${SING_BOX_VERSION}-linux-amd64 sing-box.tar.gz
 
   # Создание директории для конфигурации Sing-box
   sudo mkdir -p /etc/sing-box
