@@ -56,12 +56,13 @@ install() {
       "listen_port": 50051,
       "users": [
         {
+          "name": "test",
           "uuid": "${UUID}"
         }
       ],
       "transport": {
-        "type": "grpc",
-        "service_name": "grpc"
+        "type": "ws",
+        "path": "/ws"
       }
     }
   ],
