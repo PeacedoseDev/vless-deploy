@@ -56,6 +56,7 @@ install() {
       "listen_port": 50051,
       "users": [
         {
+          "name": "test",
           "uuid": "${UUID}"
         }
       ],
@@ -77,16 +78,41 @@ EOF
   # Создание Caddyfile
   echo "Настройка Caddy..."
   sudo tee /etc/caddy/Caddyfile >/dev/null <<EOF
-${DOMAIN_NAME}
-
-encode gzip
-
-@grpc {
-    path /grpc
-    protocol h2c
+# Добавляем логгирование
+{
+    log {
+        level DEBUG
+        output file /var/log/caddy/access.log {
+            roll true
+            roll_size 5mb
+            roll_keep 2
+            roll_keep_for 48h
+        }
+    }
 }
 
-reverse_proxy @grpc localhost:50051
+${DOMAIN_NAME} {
+    encode gzip
+
+    # Проксирование запросов на /grpc и его дочерние маршруты на Sing-box
+    handle /grpc* {
+        reverse_proxy localhost:50051 {
+            transport http {
+                versions h2c
+            }
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Обработка всех остальных запросов - ответ по умолчанию
+    handle {
+        respond "Welcome to ${DOMAIN_NAME}"
+    }
+}
+
 EOF
 
   # Перезагрузка Caddy для применения конфигурации
@@ -141,6 +167,7 @@ uninstall() {
   sudo rm -rf /etc/systemd/system/sing-box.service
   sudo rm -rf /etc/caddy
   sudo rm -rf /etc/apt/sources.list.d/caddy-fury.list
+  sudo rm -rf /var/log/caddy/access.log
 
   # Удаление пакетов
   sudo apt purge -y caddy
