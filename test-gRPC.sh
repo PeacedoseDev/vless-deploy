@@ -66,6 +66,19 @@ install() {
     "level": "info",
     "output": "console"
   },
+  "dns": {
+    "servers": [
+      {
+        "tag": "dnscf",
+        "address": "tls://1.1.1.1"
+      },
+      {
+        "tag": "block",
+        "address": "rcode://success"
+      }
+    ],
+    "strategy": "ipv4_only"
+  },
   "inbounds": [
     {
       "type": "vless",
@@ -80,16 +93,33 @@ install() {
       ],
       "transport": {
         "type": "grpc",
-        "service_name": "grpc"
+        "service_name": "grpc"  // Сервисное имя должно совпадать с маршрутом в Caddy
       }
     }
   ],
   "outbounds": [
     {
+      "protocol": "dns",
+      "outbound": "dns-out"
+    },
+    {
+      "type": "vless",
+      "tag": "vless-in"
+    },
+    {
       "type": "direct",
       "tag": "direct"
     }
   ]
+  "route": {
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns-out"
+      }
+    ],
+    "final": "direct"
+  }
 }
 EOF
 
@@ -114,13 +144,19 @@ EOF
 }
 
 ${DOMAIN_NAME} {
+    tls {
+        # Использовать автоматическое получение сертификата с помощью Let's Encrypt
+        # Вы можете также указать email для получения уведомлений от Let's Encrypt
+    }
+
     encode gzip
 
-    # Проксирование запросов на /grpc и его дочерние маршруты на Sing-box
+    # Проксирование запросов на /grpc для gRPC соединений
     handle /grpc* {
         reverse_proxy localhost:50051 {
             transport http {
                 versions h2c
+                flush_interval -1
             }
             header_up Host {host}
             header_up X-Real-IP {remote}
@@ -134,7 +170,6 @@ ${DOMAIN_NAME} {
         respond "Welcome to ${DOMAIN_NAME}"
     }
 }
-
 EOF
 
   # Перезагрузка Caddy для применения конфигурации
