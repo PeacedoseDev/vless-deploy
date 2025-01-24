@@ -63,62 +63,77 @@ install() {
   sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
   "log": {
-    "level": "info",
-    "output": "console"
-  },
+      "level": "debug",
+      "output": "console"
+    },
   "dns": {
-    "servers": [
-      {
-        "tag": "dnscf",
-        "address": "tls://1.1.1.1"
-      },
-      {
-        "tag": "block",
-        "address": "rcode://success"
-      }
-    ],
-    "strategy": "ipv4_only"
-  },
-  "inbounds": [
-    {
-      "type": "vless",
-      "tag": "vless-in",
-      "listen": "127.0.0.1",
-      "listen_port": 50051,
-      "users": [
+      "servers": [
         {
-          "name": "test",
-          "uuid": "${UUID}"
+          "tag": "dns-remote",
+          "address": "tls://1.1.1.1"
+        },
+        {
+          "tag": "block",
+          "address": "rcode://success"
         }
       ],
-      "transport": {
-        "type": "grpc",
-        "service_name": "grpc"  // Сервисное имя должно совпадать с маршрутом в Caddy
-      }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "dns",
-      "outbound": "dns-out"
+      "rules": [
+        {
+          "outbound": "any",
+          "server": "dns-remote"
+        }
+      ]
     },
-    {
-      "type": "vless",
-      "tag": "vless-in"
-    },
-    {
-      "type": "direct",
-      "tag": "direct"
-    }
-  ]
-  "route": {
-    "rules": [
+  "inbounds": [
       {
-        "protocol": "dns",
-        "outbound": "dns-out"
+        "type": "vless",
+        "tag": "vless-in",
+        "listen": "127.0.0.1",
+        "listen_port": 50051,
+        "sniff": true,
+        "users": [
+          {
+            "name": "test",
+            "uuid": "${UUID}"
+          }
+        ],
+        "transport": {
+          "type": "grpc",
+          "service_name": "grpc"
+        }
       }
     ],
-    "final": "direct"
+  "outbounds": [
+      {
+        "type": "direct",
+        "tag": "direct"
+      },
+      {
+        "type": "dns",
+        "tag": "dns-out"
+      },
+      {
+        "type": "block",
+        "tag": "block"
+      }
+    ],
+  "route": {
+      "rules": [
+        {
+          "protocol": "dns",
+          "outbound": "dns-out"
+        },
+        {
+          "protocol": "quic",
+          "outbound": "block"
+        }
+      ],
+    },
+  "experimental": {
+      "cache_file": {
+        "enabled": true
+      }
+    }
   }
 }
 EOF
