@@ -151,7 +151,6 @@ ${DOMAIN_NAME} {
         reverse_proxy localhost:50051 {
             transport http {
                 versions h2c
-                flush_interval -1
             }
             header_up Host {host}
             header_up X-Real-IP {remote}
