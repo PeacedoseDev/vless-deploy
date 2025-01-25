@@ -1,0 +1,185 @@
+{
+  // Какие логи хотим видеть
+  "log": {
+    "disabled": false,
+    "timestamp": true,
+    "level": "debug"
+  },
+  // DNS сервера
+  "dns": {
+    "servers": [
+      // DoT резолвер DNS, отказываемся от DoH потому что он медленнее
+      {
+        "tag": "cf-dot",
+        "address": "tls://1.1.1.1",
+        "detour": "direct-out"
+      },
+      {
+        "tag": "block",
+        "address": "rcode://success"
+      }
+    ],
+    // Fallback опция
+    "final": "cf-dot",
+    "independent_cache": true,
+    "disable_cache": true,
+    "strategy": "ipv4_only"
+  },
+  // Входящие соединения
+  "inbounds": [
+    // TUN Mode, создаем сетевой интерфейс
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": "172.16.0.1/30",
+      "interface_name": "singbox",
+      "strict_route": true,
+      "auto_route": true,
+      "stack": "system", // Не нагружает систему
+      // "stack": "gvisor", // Больше нагрузка, но лучше изолирует приложения и их трафик
+      "mtu": 9000,
+      "sniff": true,
+      "sniff_override_destination": true,
+      "domain_strategy": "ipv4_only"
+    },
+    // Socks5 для использования вручную
+    {
+      "type": "mixed",
+      "tag": "socks-in",
+      "listen": "127.0.0.1",
+      "listen_port": 1080,
+      "tcp_fast_open": true,
+      "sniff": true,
+      "set_system_proxy": false,
+      "domain_strategy": "ipv4_only"
+    }
+  ],
+  // Исходящие соединения
+  "outbounds": [
+    // Прямое подключение
+    {
+      "type": "direct",
+      "tag": "direct-out"
+    },
+    // Блокируем соединение
+    {
+      "type": "block",
+      "tag": "block-out"
+    },
+    // DNS ответы
+    {
+      "type": "dns",
+      "tag": "dns-out"
+    },
+    // Подключение Vless
+    {
+      "type": "vless",
+      "tag": "vless-out",
+      "server": "test.com",
+      "server_port": 443,
+      "uuid": "uid",
+      "tls": {
+        "enabled": true,
+        "server_name": "test.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "transport": {
+        "type": "grpc",
+        "service_name": "grpc" // Имя службы должно совпадать с серверным конфигом ("/grpc")
+      }
+    }
+  ],
+  // Правила маршрутизации
+  "route": {
+    // Список правил с базами GEOIP или GEOSITES
+    "rule_set": [
+      // Получаем список РКН с Github
+      {
+        "type": "remote",
+        "tag": "antizapret",
+        "format": "binary",
+        "url": "https://github.com/savely-krasovsky/antizapret-sing-box/releases/latest/download/antizapret.srs",
+        "download_detour": "vless-out" // Для скачивания используем Vless
+      },
+      // Получаем список GEOIP для RU с Github
+      {
+        "type": "remote",
+        "tag": "geoip-ru",
+        "format": "binary",
+        "url": "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/srs/ru.srs",
+        "download_detour": "vless-out" // Для скачивания используем Vless
+      }
+    ],
+    // Правила проксирования, обрабатываются в порядке сверху -> вниз
+    "rules": [
+      // Отдаем DNS
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "protocol": "dns"
+          },
+          {
+            "port": 853 // Стандартный порт DNS 53, но у нас DoT поэтому 853
+          }
+        ],
+        "outbound": "dns-out"
+      },
+      // Torrent
+      {
+        "process_name": ["qbittorrent.exe", "utorrent.exe"],
+        "outbound": "direct-out"
+      },
+      // Все что соответствует правилам ниже -> пойдет через Vless
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            // Наш proxy сервер 127.0.0.1:1080
+            "inbound": "socks-in"
+          },
+          {
+            // Список заблокированного РКН
+            "rule_set": "antizapret"
+          },
+          {
+            // Список конкретных процессов
+            "process_name": ["Discord.exe", "updater.exe", "firefox.exe"]
+          }
+        ],
+        "outbound": "vless-out"
+      },
+      // Все что соответствует правилам ниже -> пойдет напрямую
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            // Если RU IP
+            "rule_set": "geoip-ru"
+          },
+          {
+            // Если SSH/RDP
+            "port": [22, 3389]
+          }
+        ],
+        "outbound": "direct-out"
+      }
+    ],
+    // Все что не попало под правила выше выводим напрямую
+    "final": "direct-out",
+    "auto_detect_interface": true
+  },
+  // Рубрика эксперименты
+  "experimental": {
+    // Кэшируем запросы к DNS
+    "cache_file": {
+      "enabled": true
+    }
+  }
+}
