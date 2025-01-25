@@ -1,5 +1,11 @@
 #!/bin/bash
 
+textcolor='\033[0;36m'
+textcolor_light='\033[1;36m'
+red='\033[1;31m'
+green='\033[0;32m'
+clear='\033[0m'
+
 # Прекратить выполнение при ошибке
 set -e
 
@@ -22,15 +28,23 @@ install() {
   read -p "Пожалуйста, введите ваше доменное имя (например, example.com): " DOMAIN_NAME
 
   # Установка Caddy
-  echo "Установка Caddy..."
+  echo ""
+  echo ""
+  echo -e "${green}Установка Caddy...${clear}"
+  echo ""
+  echo ""
   echo "deb [trusted=yes] https://apt.fury.io/caddy/ /" | sudo tee /etc/apt/sources.list.d/caddy-fury.list
   sudo apt update
   sudo apt install -y caddy
 
   # Установка Sing-box
-  echo "Установка Sing-box..."
+  echo ""
+  echo ""
+  echo -e "${green}Установка Sing-box...${clear}"
+  echo ""
+  echo ""
   SING_BOX_VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep 'tag_name' | cut -d\" -f4)
-  SING_BOX_VERSION=${SING_BOX_VERSION#v} # Удаление ведущего 'v', если есть
+  SING_BOX_VERSION=${SING_BOX_VERSION#v} # Удаление 'v' в начале, если есть
   wget https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz -O sing-box.tar.gz
   tar -xzf sing-box.tar.gz
   sudo mv sing-box-${SING_BOX_VERSION}-linux-amd64/sing-box /usr/local/bin/
@@ -41,40 +55,88 @@ install() {
   sudo mkdir -p /etc/sing-box
 
   # Создание файла конфигурации Sing-box
-  echo "Создание конфигурации Sing-box..."
+  echo ""
+  echo ""
+  echo -e "${green}Создание конфигурации Sing-box...${clear}"
+  echo ""
+  echo ""
   sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
-  "log": {
-    "level": "info",
-    "output": "console"
-  },
-  "inbounds": [
-    {
-      "type": "vless",
-      "tag": "vless-in",
-      "listen": "127.0.0.1",
-      "listen_port": 50051,
-      "users": [
-        {
-          "name": "test",
-          "uuid": "${UUID}"
+    "log": {
+      "level": "error",
+      "output": "console"
+    },
+    // "dns": {
+    //   "servers": [
+    //     {
+    //       "tag": "dns-remote",
+    //       "address": "tls://1.1.1.1"
+    //     },
+    //     {
+    //       "tag": "block",
+    //       "address": "rcode://success"
+    //     }
+    //   ],
+    //   "rules": [
+    //     {
+    //       "outbound": "any",
+    //       "server": "dns-remote"
+    //     }
+    //   ]
+    // },
+    "inbounds": [
+      {
+        "type": "vless",
+        "tag": "vless-in",
+        "listen": "127.0.0.1",
+        "listen_port": 50051,
+        "sniff": true,
+        "users": [
+          {
+            "name": "test",
+            "uuid": "${UUID}"
+          }
+        ],
+        "transport": {
+          "type": "ws",
+          "service_name": "/ws"
         }
+      }
+    ],
+    "outbounds": [
+      {
+        "type": "direct",
+        "tag": "direct"
+      },
+      {
+        "type": "dns",
+        "tag": "dns-out"
+      },
+      {
+        "type": "block",
+        "tag": "block"
+      }
+    ],
+    "route": {
+      "rules": [
+        {
+          "protocol": "dns",
+          "outbound": "dns-out"
+        },
+        // {
+        //   "protocol": "quic",
+        //   "outbound": "block"
+        // }
       ],
-      "transport": {
-        "type": "ws",
-        "path": "/ws"
+    },
+    "experimental": {
+      "cache_file": {
+        "enabled": false
       }
     }
-  ],
-  "outbounds": [
-    {
-      "type": "direct",
-      "tag": "direct"
-    }
-  ]
+  }
 }
 EOF
-
   # Создание Caddyfile
   echo "Настройка Caddy..."
   sudo tee /etc/caddy/Caddyfile >/dev/null <<EOF
@@ -116,7 +178,11 @@ EOF
   sudo systemctl reload caddy
 
   # Создание системной службы для Sing-box
-  echo "Настройка Sing-box как системной службы..."
+  echo ""
+  echo ""
+  echo -e "${green}Настройка Sing-box как системной службы...${clear}"
+  echo ""
+  echo ""
   sudo tee /etc/systemd/system/sing-box.service >/dev/null <<EOF
 [Unit]
 Description=Sing-box Service
@@ -150,8 +216,11 @@ EOF
 
 # Функция удаления
 uninstall() {
-  echo "Удаление Sing-box и Caddy..."
-
+  echo ""
+  echo ""
+  echo -e "${red}Удаление Sing-box и Caddy...${clear}"
+  echo ""
+  echo ""
   # Остановка и отключение служб
   sudo systemctl stop sing-box || true
   sudo systemctl disable sing-box || true
@@ -174,8 +243,11 @@ uninstall() {
 
   # Автоудаление ненужных пакетов
   sudo apt autoremove -y
-
-  echo "Удаление завершено!"
+  echo ""
+  echo ""
+  echo -e "${green}Удаление завершено!${clear}"
+  echo ""
+  echo ""
 }
 
 # Проверка параметров командной строки
