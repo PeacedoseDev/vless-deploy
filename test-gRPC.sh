@@ -62,29 +62,29 @@ install() {
   echo ""
   sudo tee /etc/sing-box/config.json >/dev/null <<EOF
 {
-  "log": {
+    "log": {
       "level": "debug",
       "output": "console"
     },
-  "dns": {
-      "servers": [
-        {
-          "tag": "dns-remote",
-          "address": "tls://1.1.1.1"
-        },
-        {
-          "tag": "block",
-          "address": "rcode://success"
-        }
-      ],
-      "rules": [
-        {
-          "outbound": "any",
-          "server": "dns-remote"
-        }
-      ]
-    },
-  "inbounds": [
+    // "dns": {
+    //   "servers": [
+    //     {
+    //       "tag": "dns-remote",
+    //       "address": "tls://1.1.1.1"
+    //     },
+    //     {
+    //       "tag": "block",
+    //       "address": "rcode://success"
+    //     }
+    //   ],
+    //   "rules": [
+    //     {
+    //       "outbound": "any",
+    //       "server": "dns-remote"
+    //     }
+    //   ]
+    // },
+    "inbounds": [
       {
         "type": "vless",
         "tag": "vless-in",
@@ -94,7 +94,7 @@ install() {
         "users": [
           {
             "name": "test",
-            "uuid": "${UUID}"
+            "uuid": "e3d07595-43f0-43fb-8659-aca2c645ee5c"
           }
         ],
         "transport": {
@@ -103,7 +103,7 @@ install() {
         }
       }
     ],
-  "outbounds": [
+    "outbounds": [
       {
         "type": "direct",
         "tag": "direct"
@@ -117,21 +117,21 @@ install() {
         "tag": "block"
       }
     ],
-  "route": {
+    "route": {
       "rules": [
         {
           "protocol": "dns",
           "outbound": "dns-out"
         },
-        {
-          "protocol": "quic",
-          "outbound": "block"
-        }
+        // {
+        //   "protocol": "quic",
+        //   "outbound": "block"
+        // }
       ],
     },
-  "experimental": {
+    "experimental": {
       "cache_file": {
-        "enabled": true
+        "enabled": false
       }
     }
   }
