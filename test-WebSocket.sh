@@ -99,7 +99,7 @@ install() {
         ],
         "transport": {
           "type": "ws",
-          "service_name": "/ws"
+          "path": "/ws"
         }
       }
     ],
