@@ -94,7 +94,7 @@ install() {
         "users": [
           {
             "name": "test",
-            "uuid": "e3d07595-43f0-43fb-8659-aca2c645ee5c"
+            "uuid": "${UUID}"
           }
         ],
         "transport": {
