@@ -61,78 +61,111 @@ install() {
   echo ""
   echo ""
   sudo tee /etc/sing-box/config.json >/dev/null <<EOF
-{
-    "log": {
-      "level": "error",
-      "output": "console"
-    },
-    // "dns": {
-    //   "servers": [
-    //     {
-    //       "tag": "dns-remote",
-    //       "address": "tls://1.1.1.1"
-    //     },
-    //     {
-    //       "tag": "block",
-    //       "address": "rcode://success"
-    //     }
-    //   ],
-    //   "rules": [
-    //     {
-    //       "outbound": "any",
-    //       "server": "dns-remote"
-    //     }
-    //   ]
-    // },
-    "inbounds": [
+{  
+  // Какие логи хотим видеть
+  "log": {
+    "disabled": false,
+    "timestamp": true,
+    "level": "error",
+    "output": "singbox.log"
+  },
+  // DNS сервера
+  "dns": {
+    "servers": [
       {
-        "type": "vless",
-        "tag": "vless-in",
-        "listen": "127.0.0.1",
-        "listen_port": 50051,
-        "sniff": true,
-        "users": [
-          {
-            "name": "test",
-            "uuid": "${UUID}"
-          }
+        "tag": "dns-remote",
+        "address": "tls://1.1.1.1"
+      },
+      {
+        "tag": "dns-block",
+        "address": "rcode://success"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": [
+          "category-ads-all"
         ],
-        "transport": {
-          "type": "ws",
-          "path": "/ws"
-        }
-      }
-    ],
-    "outbounds": [
-      {
-        "type": "direct",
-        "tag": "direct"
+        "server": "dns-block",
+        "disable_cache": true
       },
       {
-        "type": "dns",
-        "tag": "dns-out"
-      },
-      {
-        "type": "block",
-        "tag": "block"
+        "outbound": "any",
+        "server": "dns-remote"
       }
     ],
-    "route": {
-      "rules": [
+    "final": "dns-remote",
+    "disable_cache": false,
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "127.0.0.1",
+      "listen_port": 50051,
+      "sniff": true,
+      "domain_strategy": "ipv4_only",
+      "users": [
         {
-          "protocol": "dns",
-          "outbound": "dns-out"
-        },
-        // {
-        //   "protocol": "quic",
-        //   "outbound": "block"
-        // }
+          "name": "test",
+          "uuid": "${UUID}"
+        }
       ],
-    },
-    "experimental": {
-      "cache_file": {
-        "enabled": false
+      "transport": {
+        "type": "ws",
+        "path": "/ws"
       }
+    }
+  ],
+  "outbounds": [
+    // Прямое подключение
+    {
+      "type": "direct",
+      "tag": "direct-out"
+    },
+    // Блокируем соединение
+    {
+      "type": "block",
+      "tag": "block-out"
+    },
+    // DNS ответы
+    {
+      "type": "dns",
+      "tag": "dns-out"
+    },
+  ],
+  "route": {
+    // Список правил с базами GEOIP или GEOSITES
+    "rule_set": [
+      // Получаем список ВСЕЙ рекламы
+      {
+        "type": "remote",
+        "tag": "category-ads-all",
+        "format": "binary",
+        "url": "https://github.com/lyc8503/sing-box-rules/raw/refs/heads/rule-set-geosite/geosite-category-ads-all.srs",
+      }
+    ],
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns-out"
+      },
+      {
+        "rule_set": [
+          "category-ads-all"
+        ],
+        "outbound": "block-out"
+      },
+      {
+        "protocol": "quic",
+        "outbound": "block-out"
+      },
+    ]
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true
     }
   }
 }
